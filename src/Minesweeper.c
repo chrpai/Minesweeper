@@ -1,6 +1,8 @@
 /*
 	Minesweeper for CNet
-	by Enlightener!
+    Copyright (C) 2026 Christopher Painter
+	This file is part of the Minesweeper project.
+	SPDX-License-Identifier: MIT
 */
 #define bool int
 #define false 0
@@ -100,11 +102,11 @@ void InitializeBoard(int c){
 	int mines_placed, mineplaced, rand_x, rand_y, x, y;
 
 
-	xBorder = "ÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ\0";
-	yBorder = "ººººººººººººººº\0";
+	xBorder = "ÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃÃ\0";
+	yBorder = "ÂºÂºÂºÂºÂºÂºÂºÂºÂºÂºÂºÂºÂºÂºÂº\0";
 	srand((unsigned)time(NULL));
 	PutText("f1cf Minesweeper! v0.1beta         c9by cbEnlightener!       c2Moves:n1");
-	sprintf(buffer,"f0n1caÉ%sP3»%sP4¼%sP2È%sq1n1", xBorder, yBorder, xBorder, yBorder);
+	sprintf(buffer,"f0n1caÃ‰%sP3Â»%sP4Â¼%sP2Ãˆ%sq1n1", xBorder, yBorder, xBorder, yBorder);
 	PutText(buffer);
 
 
@@ -116,7 +118,7 @@ void InitializeBoard(int c){
 			board[x][y] = 10; /* Unrevealed */
 			revealed[x][y] = 0;	/* Not revealed */
 		}
-		PutText(">2þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ\n\0");
+		PutText(">2Ã¾ Ã¾ Ã¾ Ã¾ Ã¾ Ã¾ Ã¾ Ã¾ Ã¾ Ã¾ Ã¾ Ã¾ Ã¾ Ã¾ Ã¾ Ã¾ Ã¾ Ã¾ Ã¾ Ã¾ Ã¾ Ã¾ Ã¾ Ã¾ Ã¾ Ã¾ Ã¾ Ã¾ Ã¾ Ã¾ Ã¾ Ã¾ Ã¾ Ã¾ Ã¾ Ã¾ Ã¾ Ã¾\n\0");
 	}
 
 	UpdateMoves(0);
@@ -310,7 +312,7 @@ void GameOver(char color, char symbol){
 void UpdateSquare(int x, int y, char color, char symbol){
 	if(symbol == '.')
 	{
-		symbol = 'þ';
+		symbol = 'Ã¾';
 	}
 	sprintf(buffer, "[%d;%dHc%c%c", y+3, (x*2)+3, color, symbol);
 	PutText(buffer);

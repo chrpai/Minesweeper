@@ -7,11 +7,19 @@
 #define bool int
 #define false 0
 #define true 1
+
 #define WIDTH  38
 #define HEIGHT 15
+#define ULS 0xC9
+#define URS 0xBB
+#define LLS 0xC8
+#define LRS 0xBC
+#define HLS 0xCD
+#define VLS 0xBA
+#define SQS 0xFE
 
 void InitializeBoard(int);
-void PlayGame(int c);
+void PlayGame(int c); 
 void UpdateMoves(int moves);
 void UpdateSquare(int x, int y, char color, char symbol);
 void GameOver(char color, char symbol);
@@ -36,7 +44,7 @@ struct	Library *CNetBase = NULL;
 struct	SignalSemaphore *SEM;
 
 				/* put your other GLOBALS here		*/
-int mines = (WIDTH * HEIGHT) / 5; /* Number of mines on the board */
+int mines = (WIDTH * HEIGHT) / 6; /* Number of mines on the board */
 int board[WIDTH][HEIGHT];
 int revealed[WIDTH][HEIGHT];
 char buffer[1000]; /* Reusable buffer for PutText */
@@ -97,16 +105,44 @@ void main( int argc, char **argv ){
 }
 
 void InitializeBoard(int c){
-	char *xBorder;
- 	char *yBorder; 
-	int mines_placed, mineplaced, rand_x, rand_y, x, y;
+	char xBorder[(WIDTH)*2+2];
+ 	char yBorder[HEIGHT];
+	char line[(WIDTH)*2];
+	unsigned char UL = ULS;
+	unsigned char UR = URS;
+	unsigned char LL = LLS;
+	unsigned char LR = LRS;	
+	unsigned char HL = HLS;
+	unsigned char VL = VLS;
+	unsigned char SQ = SQS;
 
+	int mines_placed, mineplaced, rand_x, rand_y, x, y, linewidth;
 
-	xBorder = "ÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ\0";
-	yBorder = "ººººººººººººººº\0";
+	memset(xBorder, HL, (WIDTH)*2+2);
+	memset(yBorder, VL, HEIGHT);
+	memset(line, SQ, (WIDTH)*2);
+
+	for(linewidth=0; linewidth<(WIDTH*2); linewidth++)
+	{
+		if(linewidth%2==0)
+		{
+			line[linewidth] = SQ;
+		}
+		else
+		{
+			line[linewidth] = ' ';
+		}
+	}
+
+	xBorder[(WIDTH)*2+1] = '\0';
+	yBorder[HEIGHT] = '\0';
+
+	// get the size of line
+
+	
 	srand((unsigned)time(NULL));
 	PutText("f1cf Minesweeper! v0.1beta         c9by cbEnlightener!       c2Moves:n1");
-	sprintf(buffer,"f0n1caÉ%sP3»%sP4¼%sP2È%sq1n1", xBorder, yBorder, xBorder, yBorder);
+	sprintf(buffer,"f0n1ca%c%sP3%c%sP4%c%sP2%c%sq1n1", UL, xBorder, UR, yBorder, LR, xBorder, LL, yBorder);
 	PutText(buffer);
 
 
@@ -118,7 +154,9 @@ void InitializeBoard(int c){
 			board[x][y] = 10; /* Unrevealed */
 			revealed[x][y] = 0;	/* Not revealed */
 		}
-		PutText(">2þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ þ\n\0");
+		sprintf(buffer, ">2%s\r\n", line);
+		PutText(buffer);
+		
 	}
 
 	UpdateMoves(0);
@@ -312,7 +350,7 @@ void GameOver(char color, char symbol){
 void UpdateSquare(int x, int y, char color, char symbol){
 	if(symbol == '.')
 	{
-		symbol = 'þ';
+		symbol = SQS;
 	}
 	sprintf(buffer, "[%d;%dHc%c%c", y+3, (x*2)+3, color, symbol);
 	PutText(buffer);

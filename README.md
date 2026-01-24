@@ -1,5 +1,7 @@
 # Minesweeper
 
+![Screenshot of basic gameplay.](/images/gameplay.png)
+
 Authored in ANSI C using SAS/C for the C-NET 3.05c+ BBS platform.
 
 sc MAKEGST i ins

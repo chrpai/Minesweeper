@@ -21,13 +21,14 @@
 void InitializeBoard(int);
 void PlayGame(int c); 
 void UpdateMoves(int moves);
-void UpdateSquare(int x, int y, char color, char symbol);
-void GameOver(char color, char symbol);
+void UpdateSquare(int x, int y, char color, unsigned char symbol);
+void GameOver(char color, unsigned char symbol);
 void ClearSquare(int x, int y);
 bool OutOfBounds(int x, int y);
 int CountAdjacentMines(int x, int y);
 bool ClearAdjacentSquares(int x, int y);
 void UpdateRow(int y);
+void ReturnCursor(void);
 void CallHost( UBYTE c );
 void ShutDown( char *spawn );
 ULONG Timer();
@@ -44,7 +45,7 @@ struct	Library *CNetBase = NULL;
 struct	SignalSemaphore *SEM;
 
 				/* put your other GLOBALS here		*/
-int mines = (WIDTH * HEIGHT) / 6; /* Number of mines on the board */
+int mines = (WIDTH * HEIGHT) / 7; /* Number of mines on the board */
 int board[WIDTH][HEIGHT];
 int revealed[WIDTH][HEIGHT];
 char buffer[1000]; /* Reusable buffer for PutText */
@@ -105,9 +106,9 @@ void main( int argc, char **argv ){
 }
 
 void InitializeBoard(int c){
-	char xBorder[(WIDTH)*2+2];
- 	char yBorder[HEIGHT];
-	char line[(WIDTH)*2];
+	unsigned char xBorder[(WIDTH)*2+2];
+ 	unsigned char yBorder[HEIGHT];
+	unsigned char line[(WIDTH)*2];
 	unsigned char UL = ULS;
 	unsigned char UR = URS;
 	unsigned char LL = LLS;
@@ -191,7 +192,7 @@ void PlayGame(int c){
 	y=0;
 	moves =0;
 	UpdateSquare(x,y,'f','.');
-	PutText("[?25l[19;1Hc6Use the c9ARROW KEYSc6 to move the cursor. SPACE=Reveal, Q=Quit.");
+	PutText("[?25l[19;1Hc6Use the c9ARROW KEYSc6 to move the cursor. SPACE=Reveal, Q=Quit. ");
 
 	leave=false;
 	reason = 0;
@@ -233,6 +234,7 @@ void PlayGame(int c){
 				}
 				else{
 						ClearSquare(x,y);
+						ReturnCursor();
 				}
 				break;
 			case '': /* Escape sequence for arrow keys */
@@ -265,6 +267,7 @@ void PlayGame(int c){
 				if(y<0) y=HEIGHT-1;
 				if(y>=HEIGHT) y=0;
 				UpdateSquare(x,y,'f','.');
+				ReturnCursor();
 				break;	
 		}
 	}	
@@ -330,7 +333,11 @@ void UpdateMoves(int moves){
 	PutText(buffer);
 }
 
-void GameOver(char color, char symbol){
+void ReturnCursor(void){
+	PutText("[19;62H");
+}
+
+void GameOver(char color, unsigned char symbol){
 	// reveal all mines
 	int x,y;
 	for (y = 0; y < HEIGHT; y++) 
@@ -347,7 +354,7 @@ void GameOver(char color, char symbol){
 
 }
 /* Update a single square on the board */
-void UpdateSquare(int x, int y, char color, char symbol){
+void UpdateSquare(int x, int y, char color, unsigned char symbol){
 	if(symbol == '.')
 	{
 		symbol = SQS;

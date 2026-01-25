@@ -1,4 +1,4 @@
-/*
+	/*
 	Minesweeper for CNet
     Copyright (C) 2026 Christopher Painter
 	This file is part of the Minesweeper project.
@@ -22,7 +22,9 @@ void Minesweeper(void);
 void Help(void);
 void PlayLoop(void);
 void InitializeBoard(void);
-void LoaderBoard(void);
+void InitializeLeaderboard(void);
+void UpdateLeaderBoard(void);
+void DisplayLeaderBoard(void);
 void PaintBoard(int moves);
 bool PlayGame(void); 
 void UpdateRow(int y);
@@ -35,7 +37,6 @@ bool OutOfBounds(int x, int y);
 int CountAdjacentMines(int x, int y);
 bool ClearAdjacentSquares(int x, int y);
 void UpdateRow(int y);
-void LeaderBoard(void);
 void ReturnCursor(void);
 void CallHost( UBYTE c );
 void ShutDown( char *spawn );
@@ -55,7 +56,7 @@ int board[WIDTH][HEIGHT];
 int revealed[WIDTH][HEIGHT];
 int moves;
 
-int mines = 20;
+int mines = 10;
 
 void main( int argc, char **argv )
 {
@@ -105,8 +106,9 @@ void main( int argc, char **argv )
 
 void Minesweeper(void)
 {
+	InitializeLeaderboard();
 	PlayLoop();
-	LeaderBoard();
+	DisplayLeaderBoard();
 }	
 
 void Help(void)
@@ -115,12 +117,12 @@ void Help(void)
 	PutText("f1cf                               Minesweeper Helpn2");
 	PutText("cbObjective: caClear the minefield without detonating any mines.n2");
 	PutText("cbControls:n2");
-	PutText("cfARROW KEYSc6=ceMove Cursor cfSPACEc6=ceRevealc6 cfFc6=ceFlag/Unflag cfHc6=ceHelp cfQc6=ceQuitn2");
+	PutText("cfARROW KEYSc6=ceMove Cursor cfSPACEc6=ceRevealc6 cfFc6=ceFlag/Unflag cfLc6=ceLeaderBoard cfHc6=ceHelp cfQc6=ceQuitn2");
 	PutText("cbGameplay:n2");
 	PutText("c7When you reveal a square, it will either be empty (no adjacent mines),\n");
 	PutText("contain a number (indicating how many adjacent mines there are), or\n");
 	PutText("be a mine (which ends the game).n2");
-	PutText("c7If you reveal an empty square, all adjacent empty squares will also ben1");
+	PutText("c27If you reveal an empty square, all adjacent empty squares will also ben1");
 	PutText("revealed automatically, along with any numbered squares bordering them.n2");
 	PutText("cePress any key to return to the game.");
 	input = OneKey();
@@ -131,16 +133,36 @@ void Help(void)
 	}
 }
 
+void CreateDirIfNotExist(STRPTR dirName) 
+{
+    BPTR lock = Lock(dirName, ACCESS_READ);
+    if (lock) {
+        // Directory exists, unlock it
+        UnLock(lock);
+        printf("Directory '%s' already exists.\n", dirName);
+    } else {
+        // Directory does not exist, create it
+        lock = CreateDir(dirName);
+        if (lock) {
+            UnLock(lock);
+            printf("Directory '%s' created.\n", dirName);
+        } else {
+            printf("Failed to create directory '%s'.\n", dirName);
+        }
+    }
+}
 void PlayLoop(void)
 {
 	bool playmore;
 	char input;
 	bool ask;
 
-
 	playmore = true;
 	while(playmore)
 	{	
+	    char buffer[16]; 
+		sprintf(buffer, "Mines Lvl %d", mines );
+		SetDoing(buffer);
 		InitializeBoard();
 		PaintBoard(0);
 		ask = PlayGame();
@@ -223,7 +245,7 @@ void PaintBoard(int moves)
 	memset(yBorder, VL, HEIGHT);
 
 	PutText("f1cf Minesweeper! v0.2(beta)        c9by cbEnlightener!     c2Moves:       Mines:n1");
-	sprintf(buffer,"f0n1ca%c%sP3%c%sP4%c%sP2%c%sq1[?25l[19;1HcfARROW KEYSc6=ceMove Cursor cfSPACEc6=ceRevealc6 cfFc6=ceFlag/Unflag cfHc6=ceHelp cfQc6=ceQuit. ", UL, xBorder, UR, yBorder, LR, xBorder, LL, yBorder);
+	sprintf(buffer,"f0n1ca%c%sP3%c%sP4%c%sP2%c%sq1[?25l[19;1HcfARROW KEYSc6=ceMove Cursor cfSPACEc6=ceRevealc6 cfFc6=ceFlag/Unflag cfLc6=ceLeaderBoard cfHc6=ceHelp cfQc6=ceQuit. ", UL, xBorder, UR, yBorder, LR, xBorder, LL, yBorder);
 	PutText(buffer);
 
 	/* Initialize board arrays */
@@ -297,6 +319,17 @@ bool PlayGame(void)
 				break;
 			case 'H':
 				Help();
+				PaintBoard(moves);
+				break;
+			case 'L':
+				DisplayLeaderBoard();
+				PutText("cePress any key to return to the game.");
+				input = OneKey(); /* Should be '[' */
+				if(input=='')
+				{
+				input = OneKey(); 
+				input = OneKey(); 
+				}
 				PaintBoard(moves);
 				break;
 			case 'Q':
@@ -385,23 +418,23 @@ bool PlayGame(void)
 	{
 		case 0: /* Win */
 			PutText("cbCongratulations! caYou cleared the minefield!");
+			UpdateLeaderBoard();
 			if(mines<=100)
 			{
-				mines += 20;
+				mines += 10;
 			}
 			break;
 		case -1: /* Lose */
 			PutText("c9BOOM! cbYour body parts are everywhere.");
 			if(mines>20)
 			{
-				mines -= 20;
+				mines -= 10;
 			}
 			break;
 		case 1: /* Quit */
 			ask = false;
 			break;
 	}
-
 	return ask;
 }
 
@@ -558,17 +591,57 @@ void ShutDown( char *spawn )
 	CallHost( 0 );
 }
 
-void LeaderBoard(void)
+void DisplayLeaderBoard(void)
 {
-	PutText("f1cbMinesweeper Leaderboardn2caFeature coming soon!\n");
+	char input;
+	PutText("f1cbMinesweeper Leaderboardn2caFeature coming soon!n2");
 }
 
+void InitializeLeaderboard(void)
+{
+	FILE *leaderfile;
+	const char *filename = "PFiles:MinesweeperData/leaderboard.txt";
+    CreateDirIfNotExist("PFiles:MinesweeperData");
+	
+	leaderfile = fopen(filename, "a");
+	if (leaderfile == NULL)	
+	{
+		return;
+	}
+	else
+	{
+		fclose(leaderfile);
+	}
+}
+
+void UpdateLeaderBoard(void)
+{
+	FILE *leaderfile;
+	const char *filename = "PFiles:MinesweeperData/leaderboard.txt";
+
+	leaderfile = fopen(filename, "a");
+	if (leaderfile == NULL)	
+	{
+		return;
+	}
+	else
+	{
+		fprintf(leaderfile, "Mines: %d Moves: %d\n", mines, moves);
+		fclose(leaderfile);
+	}
+}
 void CallHost( UBYTE c )
 {
 	cmess.command = c;
 	PutMsg  ( (struct MsgPort *)cport, (struct Message *)&cmess );
 	WaitPort( replyp );
 	GetMsg  ( replyp );
+}
+
+void SetDoing( char *what )
+{
+	cmess.arg1 = (ULONG)what;
+	CallHost( 7 );
 }
 
 void PutText( char *text )

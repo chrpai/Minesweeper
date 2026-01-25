@@ -4,11 +4,11 @@
 	This file is part of the Minesweeper project.
 	SPDX-License-Identifier: MIT
 */
+
 #define bool int
 #define false 0
 #define true 1
-
-#define WIDTH  38
+#define WIDTH 38
 #define HEIGHT 15
 #define ULS 0xC9
 #define URS 0xBB
@@ -18,8 +18,7 @@
 #define VLS 0xBA
 #define SQS 0xFE
 
-
-void OurMain(void);
+void Minesweeper(void);
 void Help(void);
 void PlayLoop(void);
 void InitializeBoard(void);
@@ -28,6 +27,7 @@ void PaintBoard(int moves);
 bool PlayGame(void); 
 void UpdateRow(int y);
 void UpdateMoves(int moves);
+void UpdateMines(void);
 void UpdateSquare(int x, int y, char color, unsigned char symbol);
 void GameOver(char color, unsigned char symbol);
 void ClearSquare(int x, int y);
@@ -39,35 +39,37 @@ void LeaderBoard(void);
 void ReturnCursor(void);
 void CallHost( UBYTE c );
 void ShutDown( char *spawn );
-ULONG Timer();
 
-struct MsgPort  *replyp;	/* Some commnunication details ...	*/
+/* C-Net communication GLOBALS		*/
+struct MsgPort  *replyp;
 struct CPort    *cport;
 struct CMessage  cmess;
-
-struct	MainPort  *myp;		/* Pointer to CNet port--ALL info!	*/
+struct	MainPort  *myp;
 struct	PortData  *z;
-
 char	**bm;
 struct	Library *CNetBase = NULL;
 struct	SignalSemaphore *SEM;
 
-				/* put your other GLOBALS here		*/
-int mines = (WIDTH * HEIGHT) / 7; /* Number of mines on the board */
+/* Minesweeper Globals		*/
 int board[WIDTH][HEIGHT];
 int revealed[WIDTH][HEIGHT];
-char buffer[1000]; /* Reusable buffer for PutText */
 int moves;
 
-void main( int argc, char **argv ){
+int mines = 20;
 
-	if( argc<2 || !(cport = (struct CPort *)FindPort( argv[1] )) ) {
+void main( int argc, char **argv )
+{
+
+	if( argc<2 || !(cport = (struct CPort *)FindPort( argv[1] )) ) 
+	{
 		printf("This is a CNet C program.\n");
 		exit(0);
 	}
 
 	if( !(replyp = CreatePort( 0,0 )))
+	{
 		exit(0);
+	}
 
 	cmess.cn_Message.mn_ReplyPort   = replyp;
 	cmess.cn_Message.mn_Length      = sizeof( struct CMessage );
@@ -79,30 +81,32 @@ void main( int argc, char **argv ){
 	}
 
 	cport->ack = 0;
-
 	z		=	cport->zp;
 	myp		=	cport->myp;
 	SEM		=	myp->SEM;
 	bm		=	z->bm;
 
 	if( !(CNetBase = OpenLibrary( "cnet.library",0 )) )
+	{
 		goto err0;
+	}
 
-	OurMain();
+	Minesweeper();
 
 	err0:	ShutDown( NULL );
-
 	err:	DeletePort( replyp );
 
-	if( CNetBase ) CloseLibrary( CNetBase );
-
+	if( CNetBase )
+	{
+		CloseLibrary( CNetBase );
+	}
 	exit(0);
 }
 
-void OurMain(void){
+void Minesweeper(void)
+{
 	PlayLoop();
 	LeaderBoard();
-	PutText("\r\n");
 }	
 
 void Help(void)
@@ -126,14 +130,17 @@ void Help(void)
 		OneKey();
 	}
 }
-void PlayLoop(void){
+
+void PlayLoop(void)
+{
 	bool playmore;
 	char input;
 	bool ask;
 
-	playmore = true;
 
-	while(playmore){	
+	playmore = true;
+	while(playmore)
+	{	
 		InitializeBoard();
 		PaintBoard(0);
 		ask = PlayGame();
@@ -146,21 +153,25 @@ void PlayLoop(void){
 				OneKey();
 				OneKey();
 			}
-			if(input != 'y' && input != 'Y'){
+			if(input != 'y' && input != 'Y')
+			{
 				PutText("cfNo");
 				playmore = false;
 			}
-			else{
+			else
+			{
 				PutText("cfYes");
 			}
-		}else{
+		}
+		else
+		{
 			playmore = false;
 		}
 	}
 }
 
-void InitializeBoard(void){
-
+void InitializeBoard()
+{
 	int mines_placed, mineplaced, rand_x, rand_y, x, y;
 	srand((unsigned)time(NULL));
 
@@ -173,7 +184,6 @@ void InitializeBoard(void){
 			revealed[x][y] = 0;	/* Not revealed */
 		}
 	}
-	UpdateMoves(0);
 
 	/* Place mines randomly */
 	mines_placed = 0;
@@ -192,10 +202,11 @@ void InitializeBoard(void){
 		}
 		mines_placed++;
 	}
-
 }
 
-void PaintBoard(int moves){
+void PaintBoard(int moves)
+{
+    char buffer[1000]; 
 	unsigned char UL = ULS;
 	unsigned char UR = URS;
 	unsigned char LL = LLS;
@@ -204,7 +215,6 @@ void PaintBoard(int moves){
 	unsigned char VL = VLS;
 	char xBorder[200];
 	char yBorder[200];
-
 	int y;
 
 	memset(xBorder, 0, sizeof(xBorder));
@@ -212,23 +222,22 @@ void PaintBoard(int moves){
 	memset(xBorder, HL, (WIDTH)*2+1);
 	memset(yBorder, VL, HEIGHT);
 
-	PutText("f1cf Minesweeper! v0.2(beta)        c9by cbEnlightener!       c2Moves:n1");
+	PutText("f1cf Minesweeper! v0.2(beta)        c9by cbEnlightener!     c2Moves:       Mines:n1");
 	sprintf(buffer,"f0n1ca%c%sP3%c%sP4%c%sP2%c%sq1[?25l[19;1HcfARROW KEYSc6=ceMove Cursor cfSPACEc6=ceRevealc6 cfFc6=ceFlag/Unflag cfHc6=ceHelp cfQc6=ceQuit. ", UL, xBorder, UR, yBorder, LR, xBorder, LL, yBorder);
 	PutText(buffer);
-
-
 
 	/* Initialize board arrays */
 	for (y = 0; y < HEIGHT; y++) 
 	{
 		UpdateRow(y);
 	}
-
 	UpdateMoves(moves);
+	UpdateMines();
 }
 
 
-bool PlayGame(void){
+bool PlayGame(void)
+{
 	int x,xx, y ,yy, unrevealedcount, val, reason, moves;
 	char input;
 	bool leave;
@@ -240,8 +249,9 @@ bool PlayGame(void){
 	moves =0;
 	leave=false;
 	reason = 0;
-	while(!leave){
-		unrevealedcount =0;
+	while(!leave)
+	{
+		unrevealedcount=0;
 		/* Check Win Condition */
 		for (yy = 0; yy < HEIGHT; yy++)
 		{
@@ -270,7 +280,8 @@ bool PlayGame(void){
 			UpdateSquare(x,y,'9','?');
 		}
 		input = OneKey();
-		switch(input){
+		switch(input)
+		{
 			case 'F':
 				switch (revealed[x][y])
 				{
@@ -303,7 +314,10 @@ bool PlayGame(void){
 				}
 				break;
 			case ' ':
-				if(revealed[x][y]==70) break; /* Flagged square, do nothing */
+				if(revealed[x][y]==70)
+				{	
+					break;	
+				}
 				moves++;
 				UpdateMoves(moves);
 				if(board[x][y]==9)
@@ -321,25 +335,27 @@ bool PlayGame(void){
 						UpdateSquare(x,y,'f', val);
 				}
 				break;
-			case '': /* Escape sequence for arrow keys */
+
+				case '': /* Escape sequence for arrow keys */
 				input = OneKey(); /* Should be '[' */
 				input = OneKey(); /* Actual key */
 				switch (revealed[x][y])
 				{
-				case 0:
-					UpdateSquare(x,y,'6', SQS);
-					break;
-				case 70:
-					UpdateSquare(x,y,'1', '?');
-					break;
-				default:
-					val = board[x][y];
-					if(val ==0) val = ' ';
-					else val = (char)(val + '0');
-					UpdateSquare(x,y,'f', val);
-					break;
+					case 0:
+						UpdateSquare(x,y,'6', SQS);
+						break;
+					case 70:
+						UpdateSquare(x,y,'1','F');
+						break;
+					default:
+						val = board[x][y];
+						if(val ==0) val = ' ';
+						else val = (char)(val + '0');
+						UpdateSquare(x,y,'f', val);
+						break;
 				}
-				switch(input){
+				switch(input)
+				{
 					case 'A': /* Up */
 						y--;
 						break;
@@ -365,12 +381,21 @@ bool PlayGame(void){
 	/* Game over */
 	/* reason*/
 	PutText("[21;1H");
-	switch(reason){
+	switch(reason)
+	{
 		case 0: /* Win */
 			PutText("cbCongratulations! caYou cleared the minefield!");
+			if(mines<=100)
+			{
+				mines += 20;
+			}
 			break;
 		case -1: /* Lose */
 			PutText("c9BOOM! cbYour body parts are everywhere.");
+			if(mines>20)
+			{
+				mines -= 20;
+			}
 			break;
 		case 1: /* Quit */
 			ask = false;
@@ -381,13 +406,16 @@ bool PlayGame(void){
 }
 
 
-void ClearSquare(int x, int y){
-int count;
-char character;
+void ClearSquare(int x, int y)
+{
+	int count;
+	char character;
+	
 	if(OutOfBounds(x,y)) return;
 	if(revealed[x][y]==1) return;
 	count = CountAdjacentMines(x,y);
-	if(count>0){
+	if(count>0)
+	{
 		// convert the count to an ascii character
 		character = (char)(count + '0');
 	}
@@ -399,8 +427,8 @@ char character;
 	revealed[x][y]=1;
 	UpdateSquare(x,y,'f',character);
 
-	if(count==0){
-		// clear adjacent squares
+	if(count==0)
+	{
 		ClearSquare(x-1,y-1);
 		ClearSquare(x,y-1);
 		ClearSquare(x+1,y-1);
@@ -410,26 +438,34 @@ char character;
 		ClearSquare(x,y+1);
 		ClearSquare(x+1,y+1);
 	}	
-
-
 }
 
-bool OutOfBounds(int x, int y){
-	if(x<0 || x>=WIDTH || y<0 || y>=HEIGHT){
-		return true;
-	}
-	return false;
-}	
-void UpdateMoves(int moves){ 	
-	sprintf(buffer, "[1;61Hc0   [1;61Hce%d", moves );
+bool OutOfBounds(int x, int y)
+{
+	return (x<0 || x>=WIDTH || y<0 || y>=HEIGHT);
+}
+
+void UpdateMoves(int moves)
+{ 	
+	char buffer[1000]; /* Reusable buffer for PutText */
+	sprintf(buffer, "[1;60Hce%d", moves );
 	PutText(buffer);
 }
 
-void ReturnCursor(void){
+void UpdateMines()
+{ 	
+	char buffer[1000]; /* Reusable buffer for PutText */
+	sprintf(buffer, "[1;73Hce%d", mines );
+	PutText(buffer);
+}
+
+void ReturnCursor(void)
+{
 	PutText("[19;62H");
 }
 
-void GameOver(char color, unsigned char symbol){
+void GameOver(char color, unsigned char symbol)
+{
 	// reveal all mines
 	int x,y;
 	for (y = 0; y < HEIGHT; y++) 
@@ -442,16 +478,18 @@ void GameOver(char color, unsigned char symbol){
 			}
 		}
 	}
-
-
 }
+
 /* Update a single square on the board */
-void UpdateSquare(int x, int y, char color, unsigned char symbol){
+void UpdateSquare(int x, int y, char color, unsigned char symbol)
+{
+	char buffer[16]; /* Reusable buffer for PutText */
 	sprintf(buffer, "[%d;%dHc%c%c", y+3, (x*2)+3, color, symbol);
 	PutText(buffer);
 }
 
-int CountAdjacentMines(int x, int y){
+int CountAdjacentMines(int x, int y)
+{
 	int count, ymin, ymax, xmin, xmax, dy, dx;
 	count =0;
 
@@ -462,10 +500,16 @@ int CountAdjacentMines(int x, int y){
 
 	for(dy=ymin; dy<=ymax; dy++)
 	{
- 		for(dx=xmin; dx<=xmax; dx++){
-			if(dx==x && dy==y) continue;
-			if(dx>=0 && dx<WIDTH && dy>=0 && dy<HEIGHT){
-				if(board[dx][dy]==9){
+ 		for(dx=xmin; dx<=xmax; dx++)
+		{
+			if(dx==x && dy==y) 
+			{
+				continue;
+			}
+			if(dx>=0 && dx<WIDTH && dy>=0 && dy<HEIGHT)
+			{
+				if(board[dx][dy]==9)
+				{
 					count++;
 				}
 			}
@@ -474,23 +518,22 @@ int CountAdjacentMines(int x, int y){
 	return count;
 }
 
-/*
-	C-Net communication functions
-*/
 
 
-void UpdateRow(int y){
+void UpdateRow(int y)
+{
 	int x, val;
 	char character;
-			
-	for(x=0; x<WIDTH; x++){
+		
+	for(x=0; x<WIDTH; x++)
+	{
 		switch (revealed[x][y])
 		{
 			case 0:
 				UpdateSquare(x,y,'6',SQS);
 				break;
 			case 70:
-				UpdateSquare(x,y,'1','?');
+				UpdateSquare(x,y,'1','F');
 				break;
 			default:
 			val = board[x][y];
@@ -502,30 +545,40 @@ void UpdateRow(int y){
 	}
 }	
 
-void ShutDown( char *spawn ){
-	if( spawn )
-		strcpy( z->CSpawn, spawn );
+/*
+	C-Net communication functions
+*/
 
+void ShutDown( char *spawn )
+{
+	if( spawn )
+	{
+		strcpy( z->CSpawn, spawn );
+	}
 	CallHost( 0 );
 }
 
-void LeaderBoard(void){
+void LeaderBoard(void)
+{
 	PutText("f1cbMinesweeper Leaderboardn2caFeature coming soon!\n");
 }
 
-void CallHost( UBYTE c ){
+void CallHost( UBYTE c )
+{
 	cmess.command = c;
 	PutMsg  ( (struct MsgPort *)cport, (struct Message *)&cmess );
 	WaitPort( replyp );
 	GetMsg  ( replyp );
 }
 
-void PutText( char *text ){
-	cmess.arg1 = (ULONG)text;	/* text to print		*/
+void PutText( char *text )
+{
+	cmess.arg1 = (ULONG)text;
 	CallHost( 1 );
 }
 
-char OneKey( void ){
+char OneKey( void )
+{
 	CallHost( 3 );
 	return  (char)cmess.result;
 }

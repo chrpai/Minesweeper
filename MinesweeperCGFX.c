@@ -109,7 +109,6 @@ void Minesweeper(void)
 
 void Help(void)
 {
-	char input;
 	CPutText("f1cf            Minesweeper Helpn2");
 	CPutText("cbObjective: caClear the minefield without detonating any mines.n2");
 	CPutText("cbControls:n2");
@@ -121,7 +120,7 @@ void Help(void)
 	CPutText("c2If you reveal an empty square, all adjacent empty squares will also ben1");
 	CPutText("revealed automatically, along with any numbered squares bordering them.n2");
 	CPutText("cePress any key to return to the game.");
-	input = COneKey();
+	COneKey();
 }
 
 void PlayLoop(void)
@@ -362,7 +361,7 @@ void GameOver(char color, unsigned char symbol)
 void UpdateSquare(int x, int y, char color, unsigned char symbol)
 {
 	char buffer[16]; /* Reusable buffer for PutText */
-	sprintf(buffer, "c%c%c", y+3, (x*2)+3, color, symbol);
+	sprintf(buffer, "c%c%c", color, symbol);
 	CPutText(buffer);
 }
 

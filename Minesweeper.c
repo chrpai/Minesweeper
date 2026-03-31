@@ -41,7 +41,6 @@ extern void  CDoReturn(void);
 extern UBYTE CCheckCarrier(void);
 extern char  CCheckOLM(void);
 extern void  CShutDown(char *spawn);
-extern void  CallHost(UBYTE c);
 
 #define bool int
 #define false 0
@@ -76,8 +75,6 @@ int CountAdjacentMines(int x, int y);
 bool ClearAdjacentSquares(int x, int y);
 void UpdateRow(int y);
 void ReturnCursor(void);
-void CallHost( UBYTE c );
-void ShutDown( char *spawn );
 
 /* Minesweeper Globals		*/
 int board[WIDTH][HEIGHT];
@@ -134,22 +131,22 @@ void Help(void)
 
 void CreateDirIfNotExist(STRPTR dirName) 
 {
-    BPTR lock = Lock(dirName, ACCESS_READ);
+    // BPTR lock = Lock(dirName, ACCESS_READ);
     
-    if (lock) {
-        // Directory exists, unlock it
-        UnLock(lock);
-        printf("Directory '%s' already exists.\n", dirName);
-    } else {
-        // Directory does not exist, create it
-        lock = CreateDir(dirName);
-        if (lock) {
-            UnLock(lock);
-            printf("Directory '%s' created.\n", dirName);
-        } else {
-            printf("Failed to create directory '%s'.\n", dirName);
-        }
-    }
+    // if (lock) {
+    //     // Directory exists, unlock it
+    //     UnLock(lock);
+    //     printf("Directory '%s' already exists.\n", dirName);
+    // } else {
+    //     // Directory does not exist, create it
+    //     lock = CreateDir(dirName);
+    //     if (lock) {
+    //         UnLock(lock);
+    //         printf("Directory '%s' created.\n", dirName);
+    //     } else {
+    //         printf("Failed to create directory '%s'.\n", dirName);
+    //     }
+    // }
 }
 
 void PlayLoop(void)
@@ -581,18 +578,6 @@ void UpdateRow(int y)
 	}
 }	
 
-/*
-	C-Net communication functions
-*/
-
-void ShutDown( char *spawn )
-{
-	if( spawn )
-	{
-		strcpy( z->CSpawn, spawn );
-	}
-	CallHost( 0 );
-}
 
 void DisplayLeaderBoard(void)
 {

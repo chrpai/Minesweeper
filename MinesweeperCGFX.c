@@ -1,9 +1,46 @@
-	/*
+/*
 	Minesweeper for CNet
     Copyright (C) 2026 Christopher Painter
 	This file is part of the Minesweeper project.
 	SPDX-License-Identifier: MIT
 */
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <exec/types.h>
+#include <cnet/cnet.h>
+#include <time.h>
+#include <dos/dos.h>
+
+extern struct PortData *z;
+extern struct MainPort *myp;
+extern BOOL CNCL_DoorInit(int argc, char **argv);
+extern void CNCL_DoorCleanup(void);
+extern void  CPutText(char *text);
+extern void  CPutA(void);
+extern char  COneKey(void);
+extern int   CEnterLine(UBYTE len, ULONG flags, char *prompt);
+extern void  CEnterPassword(UBYTE len);
+extern long  CCommonCommands(void);
+extern UBYTE CReadFile(char *path, UBYTE flags);
+extern void  CSetDoing(char *what);
+extern void  CCallEditor(short max, short inlines);
+extern UBYTE CReadGraphics(char *path, char flags);
+extern UBYTE CReadAccount(short id, struct UserData *user);
+extern UBYTE CSaveAccount(struct UserData *user, short id);
+extern UBYTE CAddCharge(short n, short a);
+extern UBYTE CCheckBalance(short n, short a);
+extern int   CEnterText(char firstchar, short maxchars, short perline, short maxlines);
+extern void  CCheckChanges(void);
+extern long  CGetFree(char *s, UBYTE q);
+extern void  CCheckFlowControl(void);
+extern char  CWaitForInput(long mics);
+extern UBYTE CPutQ(char *a);
+extern void  CDoReturn(void);
+extern UBYTE CCheckCarrier(void);
+extern char  CCheckOLM(void);
+extern void  CShutDown(char *spawn);
 
 #define bool int
 #define false 0
@@ -22,9 +59,14 @@ void Minesweeper(void);
 void Help(void);
 void PlayLoop(void);
 void InitializeBoard(void);
+void InitializeLeaderboard(void);
+void UpdateLeaderBoard(void);
+void DisplayLeaderBoard(void);
 void PaintBoard(void);
 bool PlayGame(void); 
 void UpdateRow(int y);
+void UpdateMoves(int moves);
+void UpdateMines(void);
 void UpdateSquare(int x, int y, char color, unsigned char symbol);
 void GameOver(char color, unsigned char symbol);
 void ClearSquare(int x, int y);
@@ -32,71 +74,32 @@ bool OutOfBounds(int x, int y);
 int CountAdjacentMines(int x, int y);
 bool ClearAdjacentSquares(int x, int y);
 void UpdateRow(int y);
-//void ReturnCursor(void);
+void ReturnCursor(void);
 void CallHost( UBYTE c );
 void ShutDown( char *spawn );
- 
-/* C-Net communication GLOBALS		*/
-struct MsgPort  *replyp;
-struct CPort    *cport;
-struct CMessage  cmess;
-struct	MainPort  *myp;
-struct	PortData  *z;
-char	**bm;
-struct	Library *CNetBase = NULL;
-struct	SignalSemaphore *SEM;
-char *RexxGetUser( char *arg );
 
 /* Minesweeper Globals		*/
 int board[WIDTH][HEIGHT];
 int revealed[WIDTH][HEIGHT];
+int moves;
 
 int mines = 10;
 
-void main( int argc, char **argv )
+static void DoorCleanup(void)
 {
+    /* Your cleanup code here */
+}
 
-	if( argc<2 || !(cport = (struct CPort *)FindPort( argv[1] )) ) 
-	{
-		printf("This is a CNet C program.\n");
-		exit(0);
-	}
 
-	if( !(replyp = CreatePort( 0,0 )))
-	{
-		exit(0);
-	}
-
-	cmess.cn_Message.mn_ReplyPort   = replyp;
-	cmess.cn_Message.mn_Length      = sizeof( struct CMessage );
-	cmess.cn_Message.mn_Node.ln_Name= "cstuff";
-
-	if( cport->ack != 30 ) {	/* right CNet version running? */
-	    cport->ack = 1;
-	    goto err;
-	}
-
-	cport->ack = 0;
-	z		=	cport->zp;
-	myp		=	cport->myp;
-	SEM		=	myp->SEM;
-	bm		=	z->bm;
-
-	if( !(CNetBase = OpenLibrary( "cnet.library",0 )) )
-	{
-		goto err0;
-	}
-
-	Minesweeper();
-
-	err0:	ShutDown( NULL );
-	err:	DeletePort( replyp );
-
-	if( CNetBase )
-	{
-		CloseLibrary( CNetBase );
-	}
-	exit(0);
+int main(int argc, char **argv)
+{
+    atexit(DoorCleanup);
+    if (!CNCL_DoorInit(argc, argv)) {
+        printf("This is a CNetC door -- run from CNet BBS.\n");
+        return 0;
+    }
+    Minesweeper();
+    return 0;
 }
 
 void Minesweeper(void)
@@ -107,18 +110,18 @@ void Minesweeper(void)
 void Help(void)
 {
 	char input;
-	PutText("f1cf            Minesweeper Helpn2");
-	PutText("cbObjective: caClear the minefield without detonating any mines.n2");
-	PutText("cbControls:n2");
-	PutText("cfARROW KEYSc6=ceMove Cursor cfSPACEc6=ceRevealc6 cfHc6=ceHelp cfQc6=ceQuitn2");
-	PutText("cbGameplay:n2");
-	PutText("c7When you reveal a square, it will either be empty (no adjacent mines),\n");
-	PutText("contain a number (indicating how many adjacent mines there are), or\n");
-	PutText("be a mine (which ends the game).n2");
-	PutText("c2If you reveal an empty square, all adjacent empty squares will also ben1");
-	PutText("revealed automatically, along with any numbered squares bordering them.n2");
-	PutText("cePress any key to return to the game.");
-	input = OneKey();
+	CPutText("f1cf            Minesweeper Helpn2");
+	CPutText("cbObjective: caClear the minefield without detonating any mines.n2");
+	CPutText("cbControls:n2");
+	CPutText("cfARROW KEYSc6=ceMove Cursor cfSPACEc6=ceRevealc6 cfHc6=ceHelp cfQc6=ceQuitn2");
+	CPutText("cbGameplay:n2");
+	CPutText("c7When you reveal a square, it will either be empty (no adjacent mines),\n");
+	CPutText("contain a number (indicating how many adjacent mines there are), or\n");
+	CPutText("be a mine (which ends the game).n2");
+	CPutText("c2If you reveal an empty square, all adjacent empty squares will also ben1");
+	CPutText("revealed automatically, along with any numbered squares bordering them.n2");
+	CPutText("cePress any key to return to the game.");
+	input = COneKey();
 }
 
 void PlayLoop(void)
@@ -132,22 +135,22 @@ void PlayLoop(void)
 	{	
 	    char buffer[16]; 
 		sprintf(buffer, "Mines Lvl %d", mines );
-		SetDoing(buffer);
+		CSetDoing(buffer);
 		InitializeBoard();
 		playmore = false;
 		ask = PlayGame();
 		if (ask)
 		{
-			PutText("ce Play again? (y/N)? ");
-			input = OneKey();
+			CPutText("ce Play again? (y/N)? ");
+			input = COneKey();
 			if(input != 'y' && input != 'Y')
 			{
-				PutText("cfNo");
+				CPutText("cfNo");
 				playmore = false;
 			}
 			else
 			{
-				PutText("cfYes");
+				CPutText("cfYes");
 			}
 		}
 		else
@@ -193,7 +196,7 @@ void InitializeBoard()
 
 void PaintBoard(void)
 {
-	 PutText("*64 PFILES:C/gameboard.seq}f0}!2}>1}cf");
+	 CPutText("*64 PFILES:Minesweeper/gameboard.seq}f0}!2}>1}cf");
 }
 
 //	/* Initialize board arrays */
@@ -250,7 +253,7 @@ bool PlayGame(void)
 			UpdateSquare(x,y,'9','?');
 		}
 		
-		input = OneKey();
+		input = COneKey();
 		switch(input)
 		{
 			case 72:
@@ -258,8 +261,8 @@ bool PlayGame(void)
 				PaintBoard();
 				break;
 			case 81:
-				PutText("f1cbAre you sure you wish to quit you yellow bellied coward? (y/N)");
-				input = OneKey();
+				CPutText("f1cbAre you sure you wish to quit you yellow bellied coward? (y/N)");
+				input = COneKey();
 				if(input=='y' || input=='Y')
 				{
 					leave = true;
@@ -279,14 +282,14 @@ bool PlayGame(void)
 	switch(reason)
 	{
 		case 0: /* Win */
-			PutText("cbCongratulations! caYou cleared the minefield!");
+			CPutText("cbCongratulations! caYou cleared the minefield!");
 			if(mines<=100)
 			{
 				mines += 10;
 			}
 			break;
 		case -1: /* Lose */
-			PutText("c9BOOM! cbYour body parts are everywhere.");
+			CPutText("c9BOOM! cbYour body parts are everywhere.");
 			if(mines>20)
 			{
 				mines -= 10;
@@ -360,7 +363,7 @@ void UpdateSquare(int x, int y, char color, unsigned char symbol)
 {
 	char buffer[16]; /* Reusable buffer for PutText */
 	sprintf(buffer, "c%c%c", y+3, (x*2)+3, color, symbol);
-	PutText(buffer);
+	CPutText(buffer);
 }
 
 int CountAdjacentMines(int x, int y)
@@ -418,45 +421,5 @@ void UpdateRow(int y)
 			break;
 		}
 	}
-}	
-
-/*
-	C-Net communication functions
-*/
-
-void ShutDown( char *spawn )
-{
-	if( spawn )
-	{
-		strcpy( z->CSpawn, spawn );
-	}
-	CallHost( 0 );
-}
-
-
-void CallHost( UBYTE c )
-{
-	cmess.command = c;
-	PutMsg  ( (struct MsgPort *)cport, (struct Message *)&cmess );
-	WaitPort( replyp );
-	GetMsg  ( replyp );
-}
-
-void SetDoing( char *what )
-{
-	cmess.arg1 = (ULONG)what;
-	CallHost( 7 );
-}
-
-void PutText( char *text )
-{
-	cmess.arg1 = (ULONG)text;
-	CallHost( 1 );
-}
-
-char OneKey( void )
-{
-	CallHost( 3 );
-	return  (char)cmess.result;
 }
 

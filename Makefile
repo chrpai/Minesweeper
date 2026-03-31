@@ -20,7 +20,8 @@ LIBS    = -Llib -lcnet_door
 # CNetC door examples (use CNCL_DoorInit or CNC_InitContext, need libcnet_door.a)
 # ---------------------------------------------------------------------------
 CNETC_DOORS = \
-    Minesweeper5
+    Minesweeper \
+	MinesweeperCGFX
 
 
 # ---------------------------------------------------------------------------
